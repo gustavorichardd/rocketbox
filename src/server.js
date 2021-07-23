@@ -2,13 +2,25 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const cors = require('cors');
+const dotenv = require('dotenv');
+dotenv.config();
+
+const { DB_USER, DB_PASSWORD, CLUSTER } = process.env;
 
 const app = express();
 
 app.use(cors());
 
 const server = require('http').Server(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+    allowUpgrades: true,
+    transports: ['polling', 'websocket', 'flashsocket'],
+    pingTimeout: 9000,
+    pingInterval: 3000,
+    cookie: 'mycookie',
+    httpCompression: true,
+    cors: '*:*'
+});
 
 io.on('connection', socket => {
     socket.on('connectRoom', box => {
@@ -16,7 +28,7 @@ io.on('connection', socket => {
     })
 })
 
-mongoose.connect("mongodb+srv://omnistack:omnistack@cluster0-ae9ei.mongodb.net/omnistack?retryWrites=true&w=majority", {
+mongoose.connect(`mongodb+srv://${DB_USER}:${DB_PASSWORD}@${CLUSTER}/thebox?retryWrites=true&w=majority`, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
@@ -26,11 +38,10 @@ app.use((req, res, next) => {
     return next();
 })
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/files', express.static(path.resolve(__dirname, '..', 'tmp')));
 
 app.use(require('./routes'))
 
-server.listen(process.env.PORT || 3333);
+server.listen(process.env.PORT);
